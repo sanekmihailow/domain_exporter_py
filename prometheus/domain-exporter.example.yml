@@ -1,0 +1,16 @@
+# Example Prometheus scrape config for domain_exporter_py (probe model).
+# Copy into your prometheus.yml under scrape_configs and adjust the targets.
+- job_name: "domain_expiry"
+  metrics_path: /get
+  relabel_configs:
+    - source_labels: [__address__]
+      target_label: __param_target
+    - source_labels: [__param_target]
+      target_label: domain
+    - target_label: __address__
+      replacement: localhost:9223
+  static_configs:
+    - targets:
+        - vk.ru
+        - timeweb.com
+        - example.com
