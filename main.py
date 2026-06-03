@@ -17,6 +17,7 @@ import metrics
 import rdap_client
 import rdap_parser
 import rdap_router
+import whois_client
 
 logging.basicConfig(
     level=logging.INFO,
@@ -31,29 +32,33 @@ async def probe_domain(session: aiohttp.ClientSession, domain: str) -> dict:
     if cached is not None:
         return cached
 
-    source, url = rdap_router.select_endpoint(domain)
-    data = await rdap_client.fetch_rdap(session, url, domain)
+    route = rdap_router.select_endpoint(domain)
 
-    if data is None:
-        result = {
-            "source": source,
-            "created_timestamp": None,
-            "expiry_timestamp": None,
-            "probe_up": 0,
-            "domain_parsed": 0,
-            "cached_at": int(time.time()),
-        }
-    else:
-        created, expiry = rdap_parser.parse(data, source)
-        parsed = 1 if (created is not None and expiry is not None) else 0
-        result = {
-            "source": source,
-            "created_timestamp": created,
-            "expiry_timestamp": expiry,
-            "probe_up": 1,
-            "domain_parsed": parsed,
-            "cached_at": int(time.time()),
-        }
+    created = expiry = None
+    probe_up = 0
+    source_used = route.source
+
+    data = await rdap_client.fetch_rdap(session, route.url, domain)
+    if data is not None:
+        created, expiry = rdap_parser.parse(data, route.source)
+        probe_up = 1
+    elif route.whois_server is not None:
+        # Primary (rdap.ss) is down — fall back to raw WHOIS for TCI zones.
+        text = await whois_client.query_whois(route.whois_server, route.domain)
+        if text is not None:
+            created, expiry = rdap_parser.parse_tcinet_whois(text)
+            probe_up = 1
+            source_used = rdap_router.SOURCE_WHOIS_TCINET
+
+    parsed = 1 if (created is not None and expiry is not None) else 0
+    result = {
+        "source": source_used,
+        "created_timestamp": created,
+        "expiry_timestamp": expiry,
+        "probe_up": probe_up,
+        "domain_parsed": parsed,
+        "cached_at": int(time.time()),
+    }
 
     cache.set_domain(domain, result)
     return result

@@ -28,3 +28,8 @@ RDAP_NET_URL: str = os.environ.get("RDAP_NET_URL", "https://www.rdap.net/domain/
 
 # IANA bootstrap registry (cached reference for TLD routing).
 BOOTSTRAP_URL: str = os.environ.get("BOOTSTRAP_URL", "https://data.iana.org/rdap/dns.json")
+
+# Fallback WHOIS server for TCI zones (.ru / .su / .рф) when rdap.ss is down.
+WHOIS_TCINET_SERVER: str = os.environ.get("WHOIS_TCINET_SERVER", "whois.tcinet.ru")
+WHOIS_PORT: int = _int("WHOIS_PORT", 43)
+WHOIS_TIMEOUT: int = _int("WHOIS_TIMEOUT", RDAP_TIMEOUT)

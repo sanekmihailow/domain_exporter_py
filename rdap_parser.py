@@ -68,6 +68,33 @@ def _parse_rdap_ss(data: dict) -> Tuple[Optional[int], Optional[int]]:
     return created, expiry
 
 
+def parse_tcinet_whois(text: str) -> Tuple[Optional[int], Optional[int]]:
+    """Parse whois.tcinet.ru plain-text output (`.ru`/`.su`/`.рф`).
+
+    Relevant fields:
+        created:    <RFC3339>   -> registration
+        paid-till:  <RFC3339>   -> expiration
+    """
+    created: Optional[int] = None
+    expiry: Optional[int] = None
+
+    if not isinstance(text, str):
+        return None, None
+
+    for line in text.splitlines():
+        key, sep, value = line.partition(":")
+        if not sep:
+            continue
+        key = key.strip().lower()
+        value = value.strip()
+        if key == "created" and created is None:
+            created = rfc3339_to_unix(value)
+        elif key == "paid-till" and expiry is None:
+            expiry = rfc3339_to_unix(value)
+
+    return created, expiry
+
+
 def parse(data: dict, source: str) -> Tuple[Optional[int], Optional[int]]:
     """Return (created_timestamp, expiry_timestamp) for the given source.
 
