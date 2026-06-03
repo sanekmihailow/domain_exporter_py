@@ -1,0 +1,21 @@
+# Example Compose file for domain_exporter_py.
+# Copy to docker-compose.yml and adjust as needed:
+#   docker compose -f docker-compose.example.yml up --build
+
+services:
+  domain-exporter:
+    build: .
+    container_name: domain-exporter
+    restart: unless-stopped
+    ports:
+      - "9223:9223"
+    environment:
+      # All optional — defaults shown.
+      EXPORTER_PORT: "9223"
+      RDAP_TIMEOUT: "10"
+      DOMAIN_CACHE_TTL: "86400"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9223/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
