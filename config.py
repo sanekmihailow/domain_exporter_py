@@ -10,6 +10,17 @@ def _int(name: str, default: int) -> int:
         return default
 
 
+def _bool(name: str, default: bool) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in ("1", "true", "yes", "on")
+
+
+# Verbose logging. Can also be toggled with the --debug CLI flag.
+DEBUG: bool = _bool("DEBUG", False)
+
+
 # HTTP server
 HOST: str = os.environ.get("EXPORTER_HOST", "0.0.0.0")
 PORT: int = _int("EXPORTER_PORT", 9223)

@@ -17,6 +17,7 @@ logger = logging.getLogger("domain_exporter.whois")
 
 async def query_whois(server: str, domain: str) -> Optional[str]:
     """Query a WHOIS server for `domain`. Returns the text body, or None."""
+    logger.debug("WHOIS %s:%s query %s", server, config.WHOIS_PORT, domain)
     try:
         reader, writer = await asyncio.wait_for(
             asyncio.open_connection(server, config.WHOIS_PORT),

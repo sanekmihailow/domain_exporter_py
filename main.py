@@ -5,6 +5,7 @@ cache, and on a miss we route -> fetch -> parse, derive the probe_up/parsed
 flags, cache the normalized result (success or failure), and render metrics.
 """
 
+import argparse
 import logging
 import time
 
@@ -19,11 +20,19 @@ import rdap_parser
 import rdap_router
 import whois_client
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-)
 logger = logging.getLogger("domain_exporter")
+
+
+def setup_logging(debug: bool) -> None:
+    # Keep the root logger at INFO so third-party libraries (aiohttp, asyncio)
+    # don't flood the output; only raise our own loggers to DEBUG.
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+    logging.getLogger("domain_exporter").setLevel(
+        logging.DEBUG if debug else logging.INFO
+    )
 
 
 async def probe_domain(session: aiohttp.ClientSession, domain: str) -> dict:
@@ -35,6 +44,7 @@ async def probe_domain(session: aiohttp.ClientSession, domain: str) -> dict:
 
     route = rdap_router.select_endpoint(domain)
     logger.info("cache MISS %s -> %s", domain, route.source)
+    logger.debug("route %s: url=%s whois_fallback=%s", domain, route.url, route.whois_server)
 
     created = expiry = None
     probe_up = 0
@@ -63,6 +73,10 @@ async def probe_domain(session: aiohttp.ClientSession, domain: str) -> dict:
     }
 
     cache.set_domain(domain, result)
+    logger.debug(
+        "result %s: source=%s probe_up=%s parsed=%s created=%s expiry=%s",
+        domain, source_used, probe_up, parsed, created, expiry,
+    )
     return result
 
 
@@ -109,8 +123,24 @@ def build_app() -> web.Application:
     return app
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Prometheus exporter for domain registration/expiry dates via RDAP."
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        default=config.DEBUG,
+        help="enable verbose debug logging (env: DEBUG)",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
+    setup_logging(args.debug)
     logger.info("Starting domain_exporter_py on %s:%s", config.HOST, config.PORT)
+    logger.debug("Debug logging enabled")
     web.run_app(build_app(), host=config.HOST, port=config.PORT)
 
 

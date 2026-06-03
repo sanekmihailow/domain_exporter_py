@@ -28,6 +28,7 @@ async def fetch_rdap(
 ) -> Optional[dict]:
     """Fetch and decode RDAP JSON. Returns the dict, or None on any failure."""
     timeout = aiohttp.ClientTimeout(total=config.RDAP_TIMEOUT)
+    logger.debug("RDAP GET %s", url)
     try:
         async with session.get(url, headers=_HEADERS, timeout=timeout) as resp:
             # RDAP returns 404 for "domain not found"; that is still a usable
@@ -37,6 +38,7 @@ async def fetch_rdap(
                 logger.info("RDAP %s -> HTTP %s for %s", url, resp.status, domain)
                 return None
             raw = await resp.read()
+            logger.debug("RDAP %s -> HTTP 200, %d bytes", url, len(raw))
     except aiohttp.ClientError as exc:
         logger.warning("RDAP request failed for %s (%s): %s", domain, url, exc)
         return None
