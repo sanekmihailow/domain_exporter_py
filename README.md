@@ -13,7 +13,8 @@ parameter, and the exporter performs a live RDAP lookup and returns the metrics.
   - `registration` → created date,
   - `expiration` → expiry date.
 - Converts RFC3339 dates into Unix timestamps.
-- Routes the RDAP source based on the domain zone.
+- Routes by domain zone: TCI zones (`.ru`/`.su`/`.рф`) to rdap.ss with a raw-WHOIS
+  fallback (`whois.tcinet.ru`), everything else to rdap.net.
 - Two independent cache layers (the IANA bootstrap registry and per-domain results), TTL 24h.
 - Resilient: the process never crashes on upstream errors and always returns a valid scrape.
 
@@ -39,14 +40,21 @@ domain_created_timestamp_seconds{domain="vk.ru"} 1704067200
 domain_expiry_timestamp_seconds{domain="vk.ru"} 1735689600
 ```
 
-## RDAP routing
+## Routing
 
-| Zone      | Source                                    |
-| --------- | ----------------------------------------- |
-| `.ru`     | `https://rdap.ss/api/query?q=<domain>`    |
-| others    | `https://www.rdap.net/domain/<domain>`    |
+TCI zones (`.ru`, `.su`, `.рф`) are served by the Russian registry; rdap.ss is
+an HTTP wrapper over `whois.tcinet.ru`. They are queried via rdap.ss first, with
+a raw-WHOIS fallback when rdap.ss is down. Everything else goes to rdap.net.
 
-The `.ru` zone is handled by an explicit override rather than through IANA bootstrap.
+| Zone                | Primary                                  | Fallback                  |
+| ------------------- | ---------------------------------------- | ------------------------- |
+| `.ru` `.su` `.рф`   | `https://rdap.ss/api/query?q=<domain>`   | `whois.tcinet.ru:43`      |
+| others              | `https://www.rdap.net/domain/<domain>`   | —                         |
+
+Domains are IDNA-normalized before routing, so `.рф` is matched as `.xn--p1ai`.
+The TCI zones use this explicit override rather than IANA bootstrap. The WHOIS
+fallback is a last resort — `whois.tcinet.ru` rate-limits hard, and an empty
+response counts as a failure (`domain_probe_up=0`), never a false success.
 
 ## Prometheus configuration
 

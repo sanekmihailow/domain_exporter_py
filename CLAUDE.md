@@ -33,13 +33,23 @@ Success is two-tier: `domain_probe_up` means the upstream answered and JSON pars
 `domain_parsed` means both required fields were additionally extracted and converted. A reachable
 RDAP that is missing one field yields `probe_up=1, parsed=0`.
 
-## RDAP routing (intentional override of IANA bootstrap)
+## Routing (intentional override of IANA bootstrap)
 
-- `.ru` domains → `https://rdap.ss/api/query?q=<domain>`
-- everything else → `https://www.rdap.net/domain/<domain>`
+TCI zones — `.ru`, `.su`, `.рф` — are served by the Russian registry
+(`whois.tcinet.ru`); rdap.ss is an HTTP wrapper over it:
 
-The IANA bootstrap registry (`dns.json`) is cached as a routing reference but `.ru` is handled by
-the explicit override above rather than via bootstrap lookup.
+- TCI zones → primary `https://rdap.ss/api/query?q=<domain>`, with raw-WHOIS
+  fallback on `whois.tcinet.ru:43` when rdap.ss is down
+- everything else → `https://www.rdap.net/domain/<domain>` (no fallback)
+
+Domains are IDNA-normalized before routing, so `.рф` is matched in its punycode
+form `.xn--p1ai`. The IANA bootstrap registry (`dns.json`) is cached as a
+routing reference but the TCI zones are handled by the explicit override above
+rather than via bootstrap lookup.
+
+The WHOIS fallback is a genuine last resort: `whois.tcinet.ru` rate-limits
+aggressively, so under load it will often return an empty response (which is
+treated as a failure → `domain_probe_up=0`, never a false success).
 
 ## Caching (two independent layers)
 
@@ -67,10 +77,11 @@ main.py          # HTTP server + /get endpoint
 config.py        # port, TTL, timeouts, endpoint settings
 metrics.py       # metric definitions and exposition formatting
 cache.py         # bootstrap cache + domain TTL cache
-rdap_router.py   # rdap.ss for .ru, rdap.net otherwise
+rdap_router.py   # TCI zones -> rdap.ss (+whois fallback), rdap.net otherwise
 rdap_client.py   # RDAP HTTP requests with timeout/error handling
-rdap_parser.py   # extract registration + expiration from events[]
-prometheus/domain-exporter.yml  # example scrape config
+rdap_parser.py   # extract dates (events[] for RDAP, whoisData/whois text for TCI)
+whois_client.py  # raw WHOIS (port 43) fallback client
+prometheus/domain-exporter.example.yml  # example scrape config
 ```
 
 Default listen port in the plan's example is `9223`.
