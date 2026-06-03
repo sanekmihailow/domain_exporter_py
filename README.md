@@ -56,6 +56,37 @@ The TCI zones use this explicit override rather than IANA bootstrap. The WHOIS
 fallback is a last resort — `whois.tcinet.ru` rate-limits hard, and an empty
 response counts as a failure (`domain_probe_up=0`), never a false success.
 
+## Running
+
+Locally:
+
+```bash
+pip install -r requirements.txt
+python main.py            # listens on 0.0.0.0:9223
+python main.py --debug    # verbose per-request logging
+```
+
+With Docker:
+
+```bash
+docker build -t domain-exporter .
+docker run -d -p 9223:9223 domain-exporter
+# or the example stack:
+docker compose -f docker-compose.example.yml up --build -d
+```
+
+### Configuration
+
+All settings are environment variables (defaults shown):
+
+| Variable             | Default            | Description                                  |
+| -------------------- | ------------------ | -------------------------------------------- |
+| `EXPORTER_HOST`      | `0.0.0.0`          | Listen address                               |
+| `EXPORTER_PORT`      | `9223`             | Listen port                                  |
+| `RDAP_TIMEOUT`       | `10`               | Outbound RDAP/WHOIS timeout (seconds)        |
+| `DOMAIN_CACHE_TTL`   | `86400`            | Per-domain result cache TTL (seconds)        |
+| `DEBUG`              | `false`            | Verbose logging (same as `--debug`)          |
+
 ## Prometheus configuration
 
 ```yaml
