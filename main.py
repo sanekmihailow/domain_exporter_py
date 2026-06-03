@@ -30,9 +30,11 @@ async def probe_domain(session: aiohttp.ClientSession, domain: str) -> dict:
     """Return a normalized result dict for the domain (cached for TTL)."""
     cached = cache.get_domain(domain)
     if cached is not None:
+        logger.info("cache HIT  %s", domain)
         return cached
 
     route = rdap_router.select_endpoint(domain)
+    logger.info("cache MISS %s -> %s", domain, route.source)
 
     created = expiry = None
     probe_up = 0
