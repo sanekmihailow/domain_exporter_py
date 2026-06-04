@@ -59,8 +59,8 @@ async def test_vk_ru_via_rdap_ss():
     assert result["created_timestamp"] < result["expiry_timestamp"]
 
 
-async def test_docker_io_via_rdap_net():
-    _assert_parsed(await _probe("docker.io"), rdap_router.SOURCE_RDAP_NET)
+async def test_web_dev_via_rdap_net():
+    _assert_parsed(await _probe("web.dev"), rdap_router.SOURCE_RDAP_NET)
 
 
 async def test_timeweb_com_via_rdap_net():
@@ -75,8 +75,8 @@ async def test_nonexistent_domain_is_not_a_false_success():
 
 async def test_metrics_render_for_live_probe():
     # The full path a Prometheus scrape takes: probe -> render exposition.
-    result = await _probe("docker.io")
-    body = metrics.render("docker.io", result)
+    result = await _probe("web.dev")
+    body = metrics.render("web.dev", result)
     text = body.decode("utf-8")
-    assert 'domain_probe_up{domain="docker.io"}' in text
-    assert 'domain_expiry_timestamp_seconds{domain="docker.io"}' in text
+    assert 'domain_probe_up{domain="web.dev"}' in text
+    assert 'domain_expiry_timestamp_seconds{domain="web.dev"}' in text
