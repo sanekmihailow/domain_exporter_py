@@ -13,11 +13,21 @@ CLAUDE.md test-target list.
 import aiohttp
 import pytest
 
+import cache
 import main
 import metrics
 import rdap_router
 
 pytestmark = pytest.mark.integration
+
+
+@pytest.fixture(autouse=True)
+def _clear_domain_cache():
+    # The domain cache is module-level and persists for the whole process, so a
+    # failed probe would otherwise leak into later tests that hit the same
+    # domain. Clear it before each test for independent live probes.
+    cache.domain_cache.clear()
+    yield
 
 
 async def _probe(domain: str) -> dict:
