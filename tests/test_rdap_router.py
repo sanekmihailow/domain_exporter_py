@@ -58,3 +58,29 @@ class TestNormalization:
         # A `.com` domain that merely contains "ru" must not match the .ru zone.
         route = rdap_router.select_endpoint("guru.com")
         assert route.source == rdap_router.SOURCE_RDAP_NET
+
+
+class TestToUnicode:
+    def test_ace_decoded_to_cyrillic(self):
+        assert rdap_router.to_unicode("xn--d1abbgf6aiiy.xn--p1ai") == "президент.рф"
+
+    def test_ace_with_hyphen_label(self):
+        assert rdap_router.to_unicode("xn----ptbwehcj.xn--p1ai") == "рус-фит.рф"
+
+    def test_already_unicode_unchanged(self):
+        assert rdap_router.to_unicode("президент.рф") == "президент.рф"
+
+    def test_plain_ascii_unchanged(self):
+        assert rdap_router.to_unicode("docker.io") == "docker.io"
+
+    def test_uppercase_and_trailing_dot_normalized(self):
+        assert rdap_router.to_unicode("XN--P1AI.") == "рф"
+
+    def test_undecodable_falls_back_to_input(self):
+        # Malformed ACE label must not raise; the cleaned input is returned.
+        assert rdap_router.to_unicode("xn--bad--.com") == "xn--bad--.com"
+
+    def test_roundtrips_with_normalize(self):
+        # to_unicode is the inverse of select_endpoint's IDNA normalization.
+        normalized = rdap_router.select_endpoint("рус-фит.рф").domain
+        assert rdap_router.to_unicode(normalized) == "рус-фит.рф"

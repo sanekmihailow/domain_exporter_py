@@ -87,7 +87,9 @@ async def handle_get(request: web.Request) -> web.Response:
 
     session: aiohttp.ClientSession = request.app["session"]
     result = await probe_domain(session, domain)
-    body = metrics.render(domain, result)
+    # Show the human-readable Unicode form in the label, even if the scrape
+    # requested the punycode/ACE form (xn--d1abbgf6aiiy.xn--p1ai -> президент.рф).
+    body = metrics.render(rdap_router.to_unicode(domain), result)
     return web.Response(body=body, content_type="text/plain", charset="utf-8")
 
 

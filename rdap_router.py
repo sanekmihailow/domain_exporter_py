@@ -41,6 +41,24 @@ def _normalize(domain: str) -> str:
     return d
 
 
+def to_unicode(domain: str) -> str:
+    """Return the human-readable Unicode form of a domain, for metric labels.
+
+    Inverse of the IDNA encoding done in ``_normalize``: decodes punycode/ACE
+    labels (``xn--…``) back to Unicode so the ``domain`` label always reads as
+    ``президент.рф`` regardless of whether the scrape requested the ASCII form
+    (``xn--d1abbgf6aiiy.xn--p1ai``) or the native Unicode one. Already-Unicode
+    or plain-ASCII input is returned unchanged, and anything that fails to
+    decode falls back to the cleaned input — this never raises.
+    """
+    d = domain.strip().rstrip(".").lower()
+    try:
+        return d.encode("ascii").decode("idna")
+    except (UnicodeError, ValueError):
+        # Non-ASCII (already Unicode) or an undecodable ACE label: leave as-is.
+        return d
+
+
 def select_endpoint(domain: str) -> Route:
     """Return the routing decision for the given domain."""
     d = _normalize(domain)
